@@ -1,0 +1,35 @@
+data:
+  #  You need to modify the following params according to your data path
+  data_root_dir: "/root/autodl-tmp/datasets_vg/datasets/nuScenes"
+  database_path: "/root/autodl-tmp/datasets_vg/datasets/nuScenes/bs_db.npy"
+  train_query_path: "/root/autodl-tmp/datasets_vg/datasets/nuScenes/bs_train_query.npy"
+  test_query_path: "/root/autodl-tmp/datasets_vg/datasets/nuScenes/bs_test_query.npy"
+  val_query_path: "/root/autodl-tmp/datasets_vg/datasets/nuScenes/bs_val_query.npy"
+  info_path: '/root/autodl-tmp/datasets_vg/datasets/nuScenes/nuscenes_infos-bs.pkl'
+
+runner:
+  nonTrivPosDistThres: 9
+  posDistThr: 18
+  nNeg: 6
+  nNegSample: 1000
+  margin: 0.5
+  resize: [256, 704]
+
+#  optimizer
+  lr: 0.00001
+  step_size: 6
+  gamma: 0.5
+  num_epochs: 120
+
+#  training process
+  num_workers_train: 6
+  num_workers_test: 8
+#  resume_path: 'weights/LCPR_epoch_1.pth.tar'
+  resume_path:
+  resume_scheduler: False
+  log: False
+
+  ckpt_dir: 'weights/'
+  result_dir: 'runs/results/'
+  cache_dir: 'runs/cache/'
+  log_dir: 'runs/logs/'
