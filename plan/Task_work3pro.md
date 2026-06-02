@@ -117,10 +117,18 @@ scripts/geotoken/
 
 任务：
 
-- [ ] 新建 `configs/geotoken/` 配置目录。
-- [ ] 新建 `dataset/geotoken/` 数据目录。
-- [ ] 新建 `geotoken/` 主包。
-- [ ] 新建 `scripts/geotoken/` 脚本目录。
+- [ ] 只创建当前阶段需要的最小骨架，避免一次性堆空目录。
+- [ ] 首批只落地：
+  - `configs/geotoken/geotoken_nuscenes.yaml`
+  - `dataset/geotoken/nuscenes_clip_dataset.py`
+  - `dataset/geotoken/corruptions.py`
+  - `geotoken/geometry/bev_grid.py`
+  - `geotoken/geometry/relation_graph.py`
+  - `geotoken/geometry/edge_sampler.py`
+  - `geotoken/models/camera_tokenizer.py`
+  - `geotoken/losses/psrd_loss.py`
+  - `scripts/geotoken/build_relation_cache.py`
+- [ ] 后续模块等进入对应 milestone 时再创建。
 - [ ] 保留旧 `modules/`、`tools/`，但新代码不依赖旧 trainer。
 - [ ] 增加统一配置字段：
   - dataset root；
@@ -137,7 +145,8 @@ scripts/geotoken/
 输出：
 
 - `configs/geotoken/geotoken_nuscenes.yaml`
-- 新代码目录骨架。
+- `geotoken` 最小可 import 包。
+- 当前阶段需要的最小代码骨架。
 
 验收：
 
@@ -251,6 +260,8 @@ scripts/geotoken/
 
 目标：把 LiDAR、ego pose、calibration 转成 PSRD 训练标签。
 
+这是第一阶段最大风险点。M3 没有通过 sanity check 前，不进入 M5 camera tokenizer 和 M6 PSRD loss 的正式训练实现。
+
 任务：
 
 - [ ] 读取 center frame LiDAR 点云。
@@ -318,6 +329,12 @@ occlusion classes:
 
 验收：
 
+- 必须输出 5 类 sanity check 可视化：
+  1. LiDAR points in ego BEV；
+  2. BEV occupancy / free / unknown map；
+  3. active anchor subset；
+  4. anchor camera projection overlay；
+  5. sampled relation edges by type。
 - 可视化 BEV occupancy 与 LiDAR 点云对齐。
 - 可视化 camera projection 在图像内位置合理。
 - occlusion label 只在可靠 ray neighborhood 内产生。
@@ -365,11 +382,13 @@ occlusion classes:
 
 目标：实现 GeoToken 的 camera-only token 生成器。
 
+第一版只实现 backbone interface 和轻量 CNN / ResNet fallback，用于快速验证 PSRD 几何闭环。DINOv2 / SigLIP / CLIP-ViT 后置为增强版本。
+
 任务：
 
 - [ ] 实现 image frame encoder。
-  - 第一阶段可用 DINOv2 / SigLIP / CLIP-ViT。
-  - 如果本地依赖不可用，先实现 backbone interface 和 ResNet fallback。
+  - 第一阶段只要求 backbone interface 和轻量 CNN / ResNet fallback。
+  - DINOv2 / SigLIP / CLIP-ViT 作为第二阶段增强 backbone。
 - [ ] 实现 camera-id embedding。
 - [ ] 实现 view-aware fusion。
 - [ ] 实现 calibration-aware BEV anchor cross-attention。
@@ -404,6 +423,8 @@ occlusion classes:
 ### M6. PSRD Loss
 
 目标：实现论文主损失，直接监督 camera token 的空间关系结构。
+
+第一版启用 `L_rel + L_dist + L_dir + L_topo`。`L_occ` 保留接口和 mask，但默认关闭；只有当 M3 的 projection / ray-neighborhood 可视化稳定后再启用。
 
 任务：
 
@@ -448,6 +469,8 @@ L_psrd =
 + lambda_occ  L_occ
 ```
 
+- [ ] 第一版默认关闭 `lambda_occ`，但保留 `loss_occ` 返回字段和 `occlusion_mask` 逻辑。
+
 - [ ] 默认权重：
   - `lambda_rel=1.0`
   - `lambda_dist=1.0`
@@ -474,7 +497,8 @@ L_psrd =
 验收：
 
 - mask 生效，invalid edge 不进入 loss。
-- occlusion loss 只使用 `m_occ_ij=1` 的 pair。
+- 第一版 `loss_occ` 可返回但默认不计入 `loss_psrd`。
+- 启用 occlusion 后，occlusion loss 只使用 `m_occ_ij=1` 的 pair。
 - loss 在 toy batch 上可反向传播。
 
 ---
@@ -530,6 +554,8 @@ L_total = L_psrd
 ### M8. Frozen Spatial Probing
 
 目标：在不接 VLM 前，先证明 token 本身有空间结构。
+
+M8 是进入 LGSS / spatial QA / frozen VLM adapter 之前的硬门槛。如果 frozen relation probe 没有明显超过 raw image token baseline，不进入 M9-M11，先回头修 M3 / M4 / M6。
 
 任务：
 
@@ -745,15 +771,18 @@ U = A_psi([Z, S])
 
 目标：把 robustness 作为主实验之一。
 
+第一版 robustness 只做 camera-structure corruption：single camera drop、multi-camera drop、front-only、random image occlusion。night / rain / motion blur 后置。
+
 任务：
 
 - [ ] 在 clean / corrupt 输入上评估 spatial QA。
-- [ ] corruption types：
+- [ ] 第一版 corruption types：
   - single camera drop；
   - multiple camera drop；
   - front-only camera；
+  - random image occlusion。
+- [ ] 第二版 corruption types：
   - limited FOV；
-  - random image occlusion；
   - night；
   - rain；
   - motion blur。
@@ -915,35 +944,75 @@ Robustness Ratio = Performance_corrupt / Performance_clean
 
 ## 3. 推荐执行顺序
 
-### Phase A：几何数据闭环
+### Step 1：最小 GeoToken 包和 config loader
 
-优先级最高。没有几何标签，PSRD 无法成立。
+对应 M0。
 
-1. M0 仓库骨架。
-2. M1 nuScenes clip dataset。
-3. M2 BEV anchor grid。
-4. M3 LiDAR relation cache。
-5. M4 sparse edge sampler。
+目标：只建立当前阶段必要骨架，保证 `geotoken` 可 import，配置可读取并打印。
 
-阶段验收：
+### Step 2：NuScenesClipDataset minimal schema
 
-- 随机 sample 可生成 active anchors、relation graph、edge labels。
-- 可视化 LiDAR BEV、camera projection、edge relation。
+对应 M1。
 
-### Phase B：PSRD token pretraining
+目标：先跑通 `T=1`、六相机、center frame 对齐、camera calibration / ego pose / lidar path schema。corruption hook 只保留接口。
 
-1. M5 camera spatial tokenizer。
-2. M6 PSRD loss。
-3. M7 PSRD pretraining runner。
-4. M8 frozen spatial probing。
+### Step 3：BEVAnchorGrid + active anchor selector
 
-阶段验收：
+对应 M2。
 
-- relation probe 比 raw image token 更好。
-- occlusion probe 在启用 `L_occ` 后有提升。
-- topology probe 能区分 free / occupied / different component。
+目标：生成 `40 x 40 = 1600` candidate anchors 和训练用 `L=400` active anchors。训练可用 LiDAR / box label 选 active anchors；推理路径不能依赖 LiDAR / GT box。
+
+### Step 4：LiDAR rasterizer + camera projection
+
+对应 M3 前半。
+
+目标：将 LiDAR 转到 ego BEV，生成 occupancy / free / unknown map，并把 anchors 投影到 camera image plane。
+
+### Step 5：Relation graph builder
+
+对应 M3 后半。
+
+目标：生成 distance / direction / topology relation label，occlusion label 先只保留 mask 和接口。M3 必须通过 5 类 sanity check 可视化后才能进入训练。
+
+### Step 6：Sparse edge sampler
+
+对应 M4。
+
+目标：实现 `L=400, P=32` 的 sparse edges，保证每帧边数不超过 `12.8k`。
+
+### Step 7：10-sample relation graph sanity check
+
+对应 M3 / M4 验收。
+
+目标：用 10 个真实 sample 检查 active anchors、relation graph、edge labels 和可视化。如果标签质量不可信，先修几何，不进入模型训练。
+
+### Step 8：CameraTokenizer minimal version
+
+对应 M5。
+
+目标：先用 backbone interface + 轻量 CNN / ResNet fallback，输出与 active anchors 对齐的 `Z: [B, L, C]` 和 `anchor_prior: [B, 1600]`。
+
+### Step 9：PSRDLoss
+
+对应 M6。
+
+目标：第一版实现 `L_rel + L_dist + L_dir + L_topo`。`L_occ` 保留字段和 mask，但默认关闭。
+
+### Step 10：single-batch overfit
+
+对应 M7 前半。
+
+目标：在单 batch 上确认 PSRD loss 可下降、mask 生效、checkpoint 可保存恢复。
+
+### Step 11：frozen relation probe
+
+对应 M8。
+
+目标：冻结 tokenizer，用同容量 probe 比较 raw image token / depth-only / BEV-only / PSRD。若 relation probe 没明显超过 raw token，暂停 LGSS / VLM，回到 M3 / M4 / M6 修正。
 
 ### Phase C：语言可访问和 VLM
+
+只有 Step 11 通过后进入。
 
 1. M9 LGSS。
 2. M10 spatial QA 构造。
@@ -1060,10 +1129,11 @@ MVP 成功标准：
 
 建议马上执行：
 
-1. 创建 `configs/geotoken/`、`dataset/geotoken/`、`geotoken/`、`scripts/geotoken/`。
-2. 实现 `NuScenesClipDataset` 的 batch schema。
-3. 实现 BEV anchor grid 和可视化。
-4. 实现 LiDAR relation cache 的最小版本。
-5. 用 10 个 sample 做 relation graph sanity check。
-
-完成上述 5 步后，再进入 camera tokenizer 和 PSRD loss。
+1. 建立最小 GeoToken 包和 config loader。
+2. 实现 `NuScenesClipDataset` minimal schema：先支持 `T=1`、六相机、center frame、calibration / ego pose / lidar path。
+3. 实现 `BEVAnchorGrid` 和 active anchor selector。
+4. 实现 LiDAR rasterizer + camera projection。
+5. 实现 relation graph builder：先做 distance / direction / topology，occlusion 只保留 mask 和接口。
+6. 实现 sparse edge sampler。
+7. 用 10 个 sample 做 relation graph sanity check，并输出 5 类可视化。
+8. 通过几何 sanity check 后，再进入 CameraTokenizer minimal version 和 PSRD loss。
