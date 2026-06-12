@@ -1,0 +1,17 @@
+# GeoDistill-VLM extra dependencies
+# Install in a Python >= 3.10 env separate from legacy work3 (torch 1.12).
+# Pin upper bounds loosely; tighten when reproducing camera-ready numbers.
+
+torch>=2.1.0
+torchvision>=0.16.0
+transformers>=4.45.0
+accelerate>=0.34.0
+peft>=0.12.0
+einops>=0.8.0
+safetensors>=0.4.5
+Pillow>=10.2.0
+numpy>=1.26.0
+PyYAML>=6.0
+nuscenes-devkit>=1.1.10
+tqdm>=4.66.0
+scipy>=1.11.0

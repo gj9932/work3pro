@@ -1,0 +1,169 @@
+experiment:
+  name: geodistill_qwen25vl_nuscenes
+  seed: 42
+
+# ── 训练 / 推理基础 ─────────────────────────────────────────
+base_vlm:
+  model_id: Qwen/Qwen2.5-VL-7B-Instruct
+  trust_remote_code: true
+  freeze_vision_encoder: true
+  freeze_merger: true
+  hidden_size: 3584          # spatial merger 输出维度
+
+# ── 数据 ───────────────────────────────────────────────────
+dataset:
+  name: nuscenes
+  root: /path/to/nuscenes
+  info_path: /path/to/nuscenes_infos.pkl
+  camera_names:
+    - CAM_FRONT
+    - CAM_FRONT_RIGHT
+    - CAM_BACK_RIGHT
+    - CAM_BACK
+    - CAM_BACK_LEFT
+    - CAM_FRONT_LEFT
+  clip_length: 1
+  center_frame: true
+  image_resolution: [640, 640]   # 与 SpaceDrive 主配置对齐
+  load_lidar: true
+  load_boxes_3d: true
+  load_map_labels: false
+
+# ── LPGA 主体 ──────────────────────────────────────────────
+lpga:
+  bottleneck: 512
+  token_adapter_layers: 2
+  ego_state_dim: 2               # v_ego, yaw_rate
+  use_yaw_rate: false
+
+# ── R²AC depth ─────────────────────────────────────────────
+r2ac:
+  D_max: 80.0
+  exp_beta: 16.0                 # max sensitivity ratio = exp(beta)
+  a_eps: 1.0e-3                  # 极限分支阈值
+
+# ── Token-level LiDAR label ────────────────────────────────
+lidar_label:
+  foreground_quantile: 0.1
+  tau_fg: 1.0                    # foreground band, meters
+  n_0: 3                          # support saturation
+  tau_q: 0.1                     # reliability scale
+  multi_sweep:
+    enable: true
+    static_sweeps: 4
+    dynamic_center_only: true
+
+# ── Allocation (risk × reliability) ────────────────────────
+allocation:
+  eta: 0.5                       # minimum risk allocation
+  lambda_r: 0.5                  # 必须 lambda_r + lambda_q == 1
+  lambda_q: 0.5
+  lambda_alloc: 1.0              # 总权重
+
+# ── Risk field (RSS-style stopping distance) ───────────────
+risk_field:
+  t_react: 1.0                   # seconds
+  a_brake: 4.0                   # m/s^2
+  d_margin: 2.0                  # meters
+  tau_r: 2.0                     # softness near d_safe
+  tau_front: 1.0                 # softness near ego front
+  w_corridor: 2.0                # corridor lateral half-width
+
+# ── Loss weights ───────────────────────────────────────────
+loss_weights:
+  ray: 1.0
+  rank: 0.1
+  coord: 1.0
+  delta: 1.0
+  order: 0.5
+  cross: 0.5
+  topo: 0.0                      # ray quality 通过后再开
+  occ: 0.0                       # ray quality 通过后再开
+  keep: 0.1                      # stage B 语义保持
+  geo_in_b: 0.1                  # stage B 几何损失低权重
+  plan: 1.0
+  robust: 1.0
+loss_misc:
+  tau_d: 1.0                     # rank temperature, meters
+  eps_q: 0.05                    # 最小 depth 权重保留
+
+# ── Sparse relation adapter ────────────────────────────────
+relation:
+  edges_per_token: 16            # 16 or 32
+  edge_types:
+    P_local: 6
+    P_ray: 4
+    P_cross: 4
+    P_hard: 1
+    P_far: 1
+  cross_view_voxel: 0.5
+  tau_depth: 1.0
+  same_branch_uses_uv: true
+  cross_branch_uses_uv: false    # 必须为 false:跨相机禁止 (delta_u, delta_v)
+  aggregator: confidence_attention   # mean / learned / confidence_attention
+
+# ── Geometry injection ─────────────────────────────────────
+injection:
+  pe_freq_tau: 10000.0
+  pe_dims: [1194, 1194, 1196]    # d_x, d_y, d_z; sum == 3584
+  alpha_pe_max: 1.0
+  alpha_rel_max: 1.0
+  beta_pe_init: 0.0              # 严格零
+  beta_rel_init: 0.0             # 严格零
+  W_up_sigma: 1.0e-4              # 非零小方差,避免梯度消失
+
+# ── Training schedule ──────────────────────────────────────
+schedule:
+  T_warm_frac: 0.05              # stage A 前 5%
+  stage_a0_steps: 20000
+  stage_a1_steps: 40000
+  stage_b_steps: 60000
+  stage_c_steps: 20000           # optional
+  batch_size: 1
+  grad_accum_steps: 8
+  amp: bfloat16
+  grad_clip: 1.0
+  optimizer: adamw
+  lr_lpga: 2.0e-4
+  lr_lora: 1.0e-4
+  lr_gate: 1.0e-3                # 较高,因为初始为 0
+  weight_decay: 0.01
+  warmup_steps: 500
+
+# ── LoRA (stage B) ─────────────────────────────────────────
+lora:
+  enable_in_stage_b: true
+  rank: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+
+# ── Coord decoder (optional, aligned with SpaceDrive <POS>) ─
+coord_decoder:
+  enable: false
+  hidden_dim: 1024
+  waypoint_steps: 6
+  waypoint_dt: 0.5
+
+# ── Robust training (stage C) ──────────────────────────────
+robust:
+  corruptions:
+    - identity
+    - type: calibration_noise
+      intrinsic_pixel_std: 1.0
+      extrinsic_translation_std: 0.02
+      extrinsic_rotation_deg_std: 0.5
+    - type: low_light
+      gain: 0.25
+      gamma: 1.6
+
+# ── Logging ────────────────────────────────────────────────
+logging:
+  out_dir: runs/geodistill
+  log_every: 50
+  ckpt_every: 5000
+  wandb_project: null
