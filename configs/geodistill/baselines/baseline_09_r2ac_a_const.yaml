@@ -1,0 +1,6 @@
+extends: ../geodistill_qwen25vl_nuscenes.yaml
+baseline:
+  profile: r2ac_a_const
+  row: 9
+  description: "R²AC with constant a (training + decode)."
+  a_const_grid: [0.0, 0.25, 0.5, 0.75, 1.0]   # sweep

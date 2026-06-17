@@ -1,0 +1,5 @@
+extends: ../geodistill_qwen25vl_nuscenes.yaml
+baseline:
+  profile: log_companding
+  row: 8
+  description: "Qwen + fixed log-companding depth adapter (G.711-like)."

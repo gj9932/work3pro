@@ -1,0 +1,5 @@
+extends: ../geodistill_qwen25vl_nuscenes.yaml
+baseline:
+  profile: relation_no_pe
+  row: 15
+  description: "Relation residual, no explicit 3D PE."

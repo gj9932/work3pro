@@ -1,0 +1,5 @@
+extends: ../geodistill_qwen25vl_nuscenes.yaml
+baseline:
+  profile: power_warp
+  row: 7
+  description: "Qwen + fixed power-warp depth adapter (Barron-style)."

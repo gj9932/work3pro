@@ -1,0 +1,5 @@
+extends: ../geodistill_qwen25vl_nuscenes.yaml
+baseline:
+  profile: full
+  row: 16
+  description: "Full GeoDistill-VLM (NTL-FGT teacher + R²AC + 3D PE + relation residual)."

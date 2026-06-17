@@ -1,0 +1,6 @@
+extends: ../geodistill_qwen25vl_nuscenes.yaml
+baseline:
+  profile: spacedrive_calibrated
+  row: 4
+  description: "LiDAR-calibrated SpaceDrive: UniDepthV2 + LPGA-equivalent L_comp + L_coord on a 512 calibration head."
+  third_party_required: true
