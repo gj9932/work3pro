@@ -1,0 +1,12 @@
+# Inherits configs/geodistill/geodistill_qwen25vl_nuscenes.yaml
+# Override per paper §4.4 row.
+extends: ../geodistill_qwen25vl_nuscenes.yaml
+baseline:
+  profile: qwen_raw
+  row: 1
+  description: "Qwen2.5-VL-7B raw, no training, no LPGA, no LoRA."
+schedule:
+  stage_a0_steps: 0
+  stage_a1_steps: 0
+  stage_b_steps: 0
+  stage_c_steps: 0

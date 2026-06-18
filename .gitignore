@@ -1,4 +1,9 @@
 .idea/*
 __pycache__/
 runs/
-weights/
+../weights/
+.venv_p0/
+.venv_geodistill/
+.claude/
+.DS_Store
+*.pyc

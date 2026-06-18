@@ -1,0 +1,9 @@
+extends: ../geodistill_qwen25vl_nuscenes.yaml
+baseline:
+  profile: relation_only
+  row: 13
+  description: "Relation residual only — no PE, no R²AC depth."
+loss_weights:
+  ray: 0.0
+  rank: 0.0
+  coord: 0.0

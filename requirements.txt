@@ -8,3 +8,12 @@ scikit_learn==1.1.3
 torch==1.12.1
 torchvision==0.13.1
 tqdm==4.64.1
+
+# work3_1 GeoDistill-VLM (M0+)
+# 注意：transformers >= 4.45 与 torch == 1.12 不兼容；
+# GeoDistill 训练在独立环境中安装下方依赖，旧 work3 路线沿用上方版本。
+# transformers>=4.45.0
+# accelerate>=0.34.0
+# peft>=0.12.0
+# einops>=0.8.0
+# safetensors>=0.4.5

@@ -1,0 +1,5 @@
+extends: ../geodistill_qwen25vl_nuscenes.yaml
+baseline:
+  profile: raw_depth
+  row: 5
+  description: "Qwen + raw-depth adapter (no R²AC). LPGA depth head replaced by RawDepthHead."

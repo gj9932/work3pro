@@ -1,0 +1,11 @@
+extends: ../geodistill_qwen25vl_nuscenes.yaml
+baseline:
+  profile: r2ac_pe_no_relation
+  row: 14
+  description: "R²AC depth + 3D PE, no relation residual."
+loss_weights:
+  delta: 0.0
+  order: 0.0
+  cross: 0.0
+  topo: 0.0
+  occ: 0.0

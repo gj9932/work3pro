@@ -1,0 +1,63 @@
+experiment:
+  name: geotoken_nuscenes
+  seed: 42
+
+dataset:
+  name: nuscenes
+  root: /path/to/nuscenes
+  info_path: /path/to/nuscenes_infos.pkl
+  camera_names:
+    - CAM_FRONT
+    - CAM_FRONT_RIGHT
+    - CAM_BACK_RIGHT
+    - CAM_BACK
+    - CAM_BACK_LEFT
+    - CAM_FRONT_LEFT
+  clip_length: 1
+  center_frame: true
+  image_size: [256, 704]
+  load_lidar: true
+  load_boxes_3d: false
+  load_map_labels: false
+
+bev:
+  x_range: [-40.0, 40.0]
+  y_range: [-40.0, 40.0]
+  cell_size: [2.0, 2.0]
+  active_anchor_count: 400
+  inference_mode: topk_camera_prior
+
+lidar_rasterizer:
+  z_range: [-3.0, 3.0]
+  occupied_min_points: 1
+  mark_free_rays: true
+
+projection:
+  anchor_height: 0.0
+  min_depth: 0.001
+
+edge_sampler:
+  edges_per_anchor: 32
+  dense_edge_mode: false
+
+psrd:
+  distance_bins: [0.0, 2.0, 5.0, 10.0, 20.0, 40.0]
+  direction_bins: 8
+  loss_weights:
+    rel: 1.0
+    dist: 1.0
+    dir: 0.5
+    topo: 0.5
+    occ: 0.0
+  topology_class_weight: inverse_frequency
+  occlusion_class_weight: inverse_frequency
+
+lgss:
+  slot_count:
+    object: 32
+    region: 16
+    relation: 16
+
+vlm_adapter:
+  type: mlp_projector
+  output_tokens: 32

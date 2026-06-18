@@ -1,0 +1,5 @@
+extends: ../geodistill_qwen25vl_nuscenes.yaml
+baseline:
+  profile: r2ac_oracle_decode
+  row: 12
+  description: "R²AC oracle target + oracle decode (a = a* both at training target and at inference)."

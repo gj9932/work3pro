@@ -1,0 +1,8 @@
+extends: ../geodistill_qwen25vl_nuscenes.yaml
+baseline:
+  profile: r2ac_reli_only
+  row: 11
+  description: "R²AC, r_hat ≡ 1, L_r = 0; only reliability drives a."
+allocation:
+  lambda_r: 0.0
+  lambda_q: 1.0

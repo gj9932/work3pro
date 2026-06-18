@@ -1,0 +1,8 @@
+extends: ../geodistill_qwen25vl_nuscenes.yaml
+baseline:
+  profile: r2ac_risk_only
+  row: 10
+  description: "R²AC, q_hat ≡ 1, L_q = 0; only risk drives a."
+allocation:
+  lambda_r: 1.0
+  lambda_q: 0.0

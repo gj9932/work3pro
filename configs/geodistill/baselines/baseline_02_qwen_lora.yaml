@@ -1,0 +1,5 @@
+extends: ../geodistill_qwen25vl_nuscenes.yaml
+baseline:
+  profile: qwen_lora
+  row: 2
+  description: "Qwen + rank-16 LoRA only (LPGA / PE / relation disabled)."
